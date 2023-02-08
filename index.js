@@ -54,6 +54,7 @@ async function main() {
       formData.append('file', fs.createReadStream(path));
 
       // Missing Content-length header
+      // 'Content-Length': https://stackoverflow.com/a/70982610
       //console.log(formData.getHeaders());
 
       let response;
