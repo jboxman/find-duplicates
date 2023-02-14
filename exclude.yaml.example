@@ -1,0 +1,8 @@
+# Regular expression characters are escaped, and thus ineffective.
+artists:
+  - Zhou Buhle
+  - Sung-Hyun Durga
+  - Snap
+albums:
+  - That one time
+  - Is that your word?
