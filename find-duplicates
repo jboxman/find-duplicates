@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+const program = require('commander');
+
+const fpAction = require('./lib/fp-action');
+const queryAction = require('./lib/query-action');
+
+program
+.command('fingerprint')
+.description('Generate fingerprints for audio files')
+.argument('<dir>', 'Directory to scan recursively for audio files')
+.action(fpAction);
+
+program
+  .command('query')
+  .description('Perform a similarity query for audio files')
+  .argument('<dir>', 'Directory to scan recursively for audio files')
+  .option('--confidence <decimal>', 'Specifies a confidence %, such as .75')
+  .option('--coverage <decimal>', 'Specifies a coverage %, such as .75')
+  .option('-E, --exclude-from <file>', 'Specifies an ignore list in YAML format')
+  .action(queryAction);
+
+async function main() {
+  try {
+    await program.parseAsync();
+  }
+  catch(err) {
+    console.error(err.stack);
+    process.exitCode = 1;
+  }
+}
+
+main();
