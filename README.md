@@ -1,6 +1,6 @@
 # Find duplicates
 
-A CLI for interacting with the Emy API of a Docker-based Emy installation. Supports a subset of the tracks and query APIs.
+A Click-based CLI for interacting with the Emy API of a Docker-based Emy installation. The current Python port includes the `fingerprint` command and a placeholder `query` command while the rest of the functionality is migrated.
 
 ## Prerequisites
 
@@ -14,60 +14,51 @@ docker run -d -v /data/emy:/app/data \
 
 ## Installation
 
-Clone the repo, run `npm i`, and then run the CLI from the root of the repository, or use `npm link` to install.
+Create a virtual environment, install the project, and then run the CLI:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
 ## Usage
 
-Supports uploading a directory of MP3 files to either fingerprint or query against existing fingerprints for similarity matching.
+The CLI exposes the two long-term commands:
 
-Query output is in the form of a CSV for easy importing into a spreadsheet, such as Google Sheets:
+- `fingerprint`: implemented in the Python Click port
+- `query`: present as a placeholder until it is migrated
 
+Example help output:
+
+```bash
+find-duplicates --help
+find-duplicates fingerprint --help
+find-duplicates query --help
 ```
-filename,title,album,artist,success,confidence,coverage,info
+
+The fingerprint command scans a directory recursively for MP3 files, reads metadata with `exiftool`, and uploads each file to Emy:
+
+```bash
+find-duplicates fingerprint /path/to/mp3s
 ```
 
-Help output:
+Global options:
 
-```
-./find-duplicates
-Usage: find-duplicates [options] [command]
-
-Options:
-  -h, --help             display help for command
-
-Commands:
-  fingerprint <dir>      Generate fingerprints for audio files
-  query [options] <dir>  Perform a similarity query for audio files
-  help [command]         display help for command
-
-
- ./find-duplicates fingerpint --help
-Usage: find-duplicates [options] [command]
-
-Options:
-  -h, --help             display help for command
-
-Commands:
-  fingerprint <dir>      Generate fingerprints for audio files
-  query [options] <dir>  Perform a similarity query for audio files
-  help [command]         display help for command
-
-./find-duplicates query --help
-Usage: find-duplicates query [options] <dir>
-
-Perform a similarity query for audio files
-
-Arguments:
-  dir                        Directory to scan recursively for audio files
-
-Options:
-  --confidence <decimal>     Specifies a confidence %, such as .75
-  --coverage <decimal>       Specifies a coverage %, such as .75
-  -E, --exclude-from <file>  Specifies an ignore list in YAML format
-  -h, --help                 display help for command
+```bash
+find-duplicates --base-url http://localhost:3340/api/v1.1 fingerprint /path/to/mp3s
+EMY_AUTHORIZATION="Basic QWRtaW46" find-duplicates fingerprint /path/to/mp3s
 ```
 
 ## Query
+
+The original Node implementation still exists in `lib/query-action.js` as migration reference material. The Click `query` command is not implemented yet.
+
+## Legacy Notes
+
+The original Node/Commander implementation remains in `lib/` during the migration so the existing behavior can be ported incrementally.
+
+## Query Reference
 
 A working `curl` command:
 
