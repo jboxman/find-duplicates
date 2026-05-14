@@ -26,3 +26,14 @@ yarn-error.log*
 /sessions
 README
 exclude.yaml
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
