@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+find_duplicates/__init__.py
+find_duplicates/cli.py
+find_duplicates/emy.py
+find_duplicates/fingerprint_action.py
+find_duplicates.egg-info/PKG-INFO
+find_duplicates.egg-info/SOURCES.txt
+find_duplicates.egg-info/dependency_links.txt
+find_duplicates.egg-info/entry_points.txt
+find_duplicates.egg-info/requires.txt
+find_duplicates.egg-info/top_level.txt

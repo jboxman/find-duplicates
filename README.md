@@ -14,7 +14,15 @@ docker run -d -v /data/emy:/app/data \
 
 ## Installation
 
-Create a virtual environment, install the project, and then run the CLI:
+The project-local launcher will bootstrap `.venv` for you on first run:
+
+```bash
+./find-duplicates --help
+```
+
+It expects a local `python3.10+` to be available and will stop with a clear error if the machine only has an older Python.
+
+If you prefer the explicit workflow, create a virtual environment, install the project, and then run the CLI:
 
 ```bash
 python3 -m venv .venv
