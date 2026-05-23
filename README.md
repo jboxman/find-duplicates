@@ -37,7 +37,7 @@ find-duplicates fingerprint --help
 find-duplicates query --help
 ```
 
-The fingerprint command scans a directory recursively for MP3 files, reads metadata with `exiftool`, and uploads each file to Emy:
+The fingerprint command scans a directory recursively for MP3 files, reads metadata with `exiftool`, and uploads each file to Emy. The upload payload includes ExifTool-derived filename and directory metadata so matching tracks can be traced back later:
 
 ```bash
 find-duplicates fingerprint /path/to/mp3s

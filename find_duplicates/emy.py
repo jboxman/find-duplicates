@@ -108,6 +108,14 @@ def build_track_payload(path: Path) -> tuple[dict[str, str], dict[str, str]]:
     filename = metadata.get("System:FileName")
     if isinstance(filename, str) and filename.strip():
         payload["metaFields[filename]"] = filename.strip()
+    directory = metadata.get("System:Directory")
+    if isinstance(directory, str) and directory.strip():
+        payload["metaFields[directory]"] = directory.strip()
+    file_size = metadata.get("System:FileSize")
+    if isinstance(file_size, (str, int, float)):
+        value = str(file_size).strip()
+        if value:
+            payload["metaFields[fileSize]"] = value
     if album:
         payload["metaFields[album]"] = album
     if title:
