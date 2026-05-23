@@ -13,6 +13,21 @@ import yaml
 
 from .emy import CliError, build_track_payload, iter_audio_files, parse_error_payload
 
+QUERY_CSV_HEADER = [
+    "filename",
+    "directory",
+    "title",
+    "album",
+    "artist",
+    "success",
+    "confidence",
+    "coverage",
+    "album",
+    "path",
+    "fileSize",
+    "info",
+]
+
 
 def run(
     session: requests.Session,
@@ -32,19 +47,7 @@ def run(
 
     query_params = build_query_params(confidence=confidence, coverage=coverage)
     writer = csv.writer(click.get_text_stream("stdout"))
-    writer.writerow(
-        [
-            "filename",
-            "directory",
-            "title",
-            "album",
-            "artist",
-            "success",
-            "confidence",
-            "coverage",
-            "info",
-        ]
-    )
+    writer.writerow(QUERY_CSV_HEADER)
 
     for path in paths:
         error = ""
@@ -89,7 +92,8 @@ def run(
             click.echo(str(exc), err=True)
             error = str(exc)
 
-        writer.writerow(build_row(path, metadata_fields, results, error))
+        for row in build_rows(path, metadata_fields, results, error):
+            writer.writerow(row)
 
 
 def post_query(
@@ -139,13 +143,13 @@ def build_query_params(
     return params
 
 
-def build_row(
+def build_rows(
     path: Path,
     metadata_fields: dict[str, str],
     results: list[dict[str, Any]],
     error: str,
-) -> list[str]:
-    row = [
+) -> list[list[str]]:
+    source_columns = [
         path.name,
         str(path.parent),
         metadata_fields.get("songTitle", ""),
@@ -154,20 +158,33 @@ def build_row(
     ]
 
     if not results:
+        row = list(source_columns)
         row.append("Error" if error else "No")
-        row.extend(["", "", error])
-        return row
+        row.extend(["", "", "", error])
+        return [row]
 
-    first_match = results[0]
-    audio = first_match.get("audio") if isinstance(first_match, dict) else None
-    coverage = audio.get("coverage") if isinstance(audio, dict) else None
+    rows: list[list[str]] = []
+    for item in results:
+        row = list(source_columns)
+        audio = item.get("audio") if isinstance(item, dict) else None
+        coverage = audio.get("coverage") if isinstance(audio, dict) else None
 
-    row.append("Yes")
-    row.append(stringify_value(get_nested(coverage, "queryCoverage")))
-    row.append(stringify_value(get_nested(coverage, "trackCoverage")))
-    match_info = [info for item in results if (info := format_match_info(item))]
-    row.append(", ".join(match_info))
-    return row
+        row.append("Yes")
+        row.append(stringify_value(get_nested(coverage, "queryCoverage")))
+        row.append(stringify_value(get_nested(coverage, "trackCoverage")))
+        row.extend(format_match_columns(item))
+        row.append(format_match_info(item))
+        rows.append(row)
+
+    return rows
+
+
+def format_match_columns(item: dict[str, Any]) -> list[str]:
+    return [
+        extract_match_album(item),
+        extract_match_path(item),
+        extract_match_file_size(item),
+    ]
 
 
 def format_match_info(item: Any) -> str:
@@ -183,6 +200,32 @@ def format_match_info(item: Any) -> str:
     if not title and not artist:
         return ""
     return f"{title}:{artist}"
+
+
+def extract_match_album(item: Any) -> str:
+    meta_fields = get_track_meta_fields(item)
+    return stringify_value(meta_fields.get("album"))
+
+
+def extract_match_file_size(item: Any) -> str:
+    meta_fields = get_track_meta_fields(item)
+    return stringify_value(meta_fields.get("fileSize"))
+
+
+def extract_match_path(item: Any) -> str:
+    meta_fields = get_track_meta_fields(item)
+    filename = stringify_value(meta_fields.get("filename"))
+    directory = stringify_value(meta_fields.get("directory"))
+
+    if filename and directory:
+        return str(Path(directory) / filename)
+    return directory or filename
+
+
+def get_track_meta_fields(item: Any) -> dict[str, Any]:
+    track = item.get("track") if isinstance(item, dict) else None
+    meta_fields = track.get("metaFields") if isinstance(track, dict) else None
+    return meta_fields if isinstance(meta_fields, dict) else {}
 
 
 def get_nested(mapping: dict[str, Any] | None, key: str) -> Any:

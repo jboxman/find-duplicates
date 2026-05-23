@@ -71,8 +71,10 @@ find-duplicates query /path/to/mp3s --coverage .75 -E exclude.yaml
 CSV columns:
 
 ```text
-filename,directory,title,album,artist,success,confidence,coverage,info
+filename,directory,title,album,artist,success,confidence,coverage,album,path,fileSize,info
 ```
+
+Each returned match is emitted as its own CSV row. When a query returns multiple matches, the submitted file columns are repeated for each match row.
 
 When neither `--confidence` nor `--coverage` is specified, the CLI defaults to `minConfidence=.90` to match the legacy behavior. The exclude file accepts YAML keys such as `artists` and `albums`; values are treated as case-insensitive literal prefixes.
 
