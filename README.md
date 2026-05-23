@@ -1,6 +1,6 @@
 # Find duplicates
 
-A Click-based CLI for interacting with the Emy API of a Docker-based Emy installation. The current Python port includes the `fingerprint` command and a placeholder `query` command while the rest of the functionality is migrated.
+A Click-based CLI for interacting with the Emy API of a Docker-based Emy installation.
 
 ## Prerequisites
 
@@ -32,10 +32,10 @@ pip install -e .
 
 ## Usage
 
-The CLI exposes the two long-term commands:
+The CLI exposes two commands in the Python Click port:
 
-- `fingerprint`: implemented in the Python Click port
-- `query`: present as a placeholder until it is migrated
+- `fingerprint`: generate fingerprints for audio files
+- `query`: run similarity queries and emit CSV results
 
 Example help output:
 
@@ -60,7 +60,21 @@ EMY_AUTHORIZATION="Basic QWRtaW46" find-duplicates fingerprint /path/to/mp3s
 
 ## Query
 
-The original Node implementation still exists in `lib/query-action.js` as migration reference material. The Click `query` command is not implemented yet.
+The Python `query` command scans a directory recursively for MP3 files, reads metadata with `exiftool`, submits each file to Emy's query endpoint, and prints CSV results to stdout.
+
+```bash
+find-duplicates query /path/to/mp3s
+find-duplicates query /path/to/mp3s --confidence .75
+find-duplicates query /path/to/mp3s --coverage .75 -E exclude.yaml
+```
+
+CSV columns:
+
+```text
+filename,directory,title,album,artist,success,confidence,coverage,info
+```
+
+When neither `--confidence` nor `--coverage` is specified, the CLI defaults to `minConfidence=.90` to match the legacy behavior. The exclude file accepts YAML keys such as `artists` and `albums`; values are treated as case-insensitive literal prefixes.
 
 ## Legacy Notes
 

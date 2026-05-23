@@ -5,8 +5,9 @@ from pathlib import Path
 import click
 import requests
 
-from .emy import CliError, DEFAULT_AUTHORIZATION, DEFAULT_BASE_URL, build_session
+from .emy import DEFAULT_AUTHORIZATION, DEFAULT_BASE_URL, build_session
 from .fingerprint_action import run as run_fingerprint_action
+from .query_action import run as run_query_action
 
 
 @click.group()
@@ -41,10 +42,42 @@ def fingerprint(session: requests.Session, directory: Path) -> None:
 
 
 @cli.command()
-@click.argument("directory", type=click.Path(exists=True, file_okay=False))
-def query(directory: str) -> None:
+@click.argument(
+    "directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option(
+    "--confidence",
+    type=click.FloatRange(0, 1),
+    help="Specifies a confidence %, such as .75",
+)
+@click.option(
+    "--coverage",
+    type=click.FloatRange(0, 1),
+    help="Specifies a coverage %, such as .75",
+)
+@click.option(
+    "-E",
+    "--exclude-from",
+    type=click.Path(exists=False, dir_okay=False, path_type=Path),
+    help="Specifies an ignore list in YAML format",
+)
+@click.pass_obj
+def query(
+    session: requests.Session,
+    directory: Path,
+    confidence: float | None,
+    coverage: float | None,
+    exclude_from: Path | None,
+) -> None:
     """Perform a similarity query for audio files."""
-    raise CliError("`query` has not been ported yet. Start with `fingerprint`.")
+    run_query_action(
+        session,
+        directory,
+        confidence=confidence,
+        coverage=coverage,
+        exclude_from=exclude_from,
+    )
 
 
 def main() -> None:
