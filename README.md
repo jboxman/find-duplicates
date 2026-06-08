@@ -28,6 +28,7 @@ If you prefer the explicit workflow, create a virtual environment, install the p
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+find-duplicates --help
 ```
 
 ## Usage
@@ -71,16 +72,12 @@ find-duplicates query /path/to/mp3s --coverage .75 -E exclude.yaml
 CSV columns:
 
 ```text
-filename,directory,title,album,artist,success,confidence,coverage,album,path,fileSize,info
+filename,directory,title,album,artist,success,confidence,coverage,info
 ```
 
 Each returned match is emitted as its own CSV row. When a query returns multiple matches, the submitted file columns are repeated for each match row.
 
 When neither `--confidence` nor `--coverage` is specified, the CLI defaults to `minConfidence=.90` to match the legacy behavior. The exclude file accepts YAML keys such as `artists` and `albums`; values are treated as case-insensitive literal prefixes.
-
-## Legacy Notes
-
-The original Node/Commander implementation remains in `lib/` during the migration so the existing behavior can be ported incrementally.
 
 ## Query Reference
 
@@ -97,33 +94,10 @@ curl --request POST \
 
 ## Errors
 
-Errors from where the ssh tunnel went away:
-
-```
-filename,title,album,artist,success,confidence,coverage,matches
-Failed to upload: /path/to/file.mp3
-write EPIPE
-TypeError: Cannot read properties of undefined (reading 'data')
-    at Command.action (...lib/query-action.js:70:41)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-    at async Command.parseAsync (...node_modules/commander/lib/command.js:935:5)
-    at async main (...find-duplicates:24:5)
-```
-
-```
-filename,title,album,artist,success,confidence,coverage,matches
-Failed to upload: /path/to/file.mp3
-connect ECONNREFUSED 127.0.0.1:3340
-TypeError: Cannot read properties of undefined (reading 'data')
-    at Command.action (...lib/query-action.js:70:41)
-    at processTicksAndRejections (node:internal/process/task_queues:96:5)
-    at async Command.parseAsync (...node_modules/commander/lib/command.js:935:5)
-    at async main (...find-duplicates:24:5)
-```
+Connection failures and API validation errors are reported to stderr. Query results continue to be emitted as CSV so failures remain visible in downstream processing.
 
 ## TODO
 
-- Tests
 - Error handling
 
 ## References

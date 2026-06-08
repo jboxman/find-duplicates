@@ -1,2 +1,0 @@
-[console_scripts]
-find-duplicates = find_duplicates.cli:main
