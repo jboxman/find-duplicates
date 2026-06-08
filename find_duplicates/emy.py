@@ -37,7 +37,19 @@ def iter_audio_files(directory: Path) -> list[Path]:
 def run_exiftool(path: Path) -> dict[str, Any]:
     try:
         result = subprocess.run(
-            ["exiftool", "-j", "-G1", str(path)],
+            [
+                "exiftool",
+                "-j",
+                "-s",
+                "-filename",
+                "-directory",
+                "-filesize#",
+                "-audiobitrate#",
+                "-title",
+                "-album",
+                "-artist",
+                str(path),
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -58,41 +70,19 @@ def run_exiftool(path: Path) -> dict[str, Any]:
 
     return payload[0]
 
-
-def pick_tag(metadata: dict[str, Any], *keys: str) -> str:
-    for key in reversed(keys):
-        raw = metadata.get(key)
-        if isinstance(raw, (str, int, float)):
-            value = str(raw).strip()
-            if value:
-                return value
-    return ""
+def stringify_metadata_value(raw: Any) -> str:
+    if not isinstance(raw, (str, int, float)):
+        return ""
+    return str(raw).strip()
 
 
 def build_track_payload(path: Path) -> tuple[dict[str, str], dict[str, str]]:
     metadata = run_exiftool(path)
 
-    album = pick_tag(
-        metadata,
-        "ID3v1:Album",
-        "Lyrics3:ExtendedAlbumName",
-        "ID3v2_3:Album",
-        "ID3v2_4:Album",
-    )
-    title = pick_tag(
-        metadata,
-        "ID3v1:Title",
-        "Lyrics3:ExtendedTrackTitle",
-        "ID3v2_3:Title",
-        "ID3v2_4:Title",
-    )
-    artist = pick_tag(
-        metadata,
-        "ID3v1:Artist",
-        "Lyrics3:ExtendedArtistName",
-        "ID3v2_3:Artist",
-        "ID3v2_4:Artist",
-    )
+    album = stringify_metadata_value(metadata.get("Album"))
+    title = stringify_metadata_value(metadata.get("Title"))
+    artist = stringify_metadata_value(metadata.get("Artist"))
+    bitrate = stringify_metadata_value(metadata.get("AudioBitrate"))
 
     fields = {
         "albumName": album,
@@ -105,17 +95,17 @@ def build_track_payload(path: Path) -> tuple[dict[str, str], dict[str, str]]:
         "mediaType": "Audio",
     }
 
-    filename = metadata.get("System:FileName")
-    if isinstance(filename, str) and filename.strip():
-        payload["metaFields[filename]"] = filename.strip()
-    directory = metadata.get("System:Directory")
-    if isinstance(directory, str) and directory.strip():
-        payload["metaFields[directory]"] = directory.strip()
-    file_size = metadata.get("System:FileSize")
-    if isinstance(file_size, (str, int, float)):
-        value = str(file_size).strip()
-        if value:
-            payload["metaFields[fileSize]"] = value
+    filename = stringify_metadata_value(metadata.get("FileName"))
+    if filename:
+        payload["metaFields[filename]"] = filename
+    directory = stringify_metadata_value(metadata.get("Directory"))
+    if directory:
+        payload["metaFields[directory]"] = directory
+    file_size = stringify_metadata_value(metadata.get("FileSize"))
+    if file_size:
+        payload["metaFields[fileSize]"] = file_size
+    if bitrate:
+        payload["metaFields[audioBitrate]"] = bitrate
     if album:
         payload["metaFields[album]"] = album
     if title:
