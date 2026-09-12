@@ -4,14 +4,21 @@ import csv
 import json
 import mimetypes
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import click
 import requests
 import yaml
 
-from .emy import CliError, build_track_payload, iter_audio_files, parse_error_payload
+from .emy import (
+    CliError,
+    build_track_payload,
+    clone_session,
+    iter_audio_files,
+    parse_error_payload,
+)
 
 QUERY_CSV_HEADER = [
     "filename",
@@ -36,6 +43,7 @@ def run(
     confidence: float | None,
     coverage: float | None,
     exclude_from: Path | None,
+    max_workers: int,
 ) -> None:
     paths = iter_audio_files(directory)
     if not paths:
@@ -49,51 +57,96 @@ def run(
     writer = csv.writer(click.get_text_stream("stdout"))
     writer.writerow(QUERY_CSV_HEADER)
 
-    for path in paths:
-        error = ""
-        results: list[dict[str, Any]] = []
-        metadata_fields: dict[str, str] = {}
-
-        try:
-            payload, metadata_fields = build_track_payload(path)
-
-            if matches_any(exclude_artists, metadata_fields.get("artistName", "")):
-                continue
-            if matches_any(exclude_albums, metadata_fields.get("albumName", "")):
-                continue
-
-            results = post_query(
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for result in executor.map(
+            lambda path: query_path(
                 session,
                 path,
-                payload,
-                query_params,
-            )
-        except requests.RequestException as exc:
-            click.echo(f"Failed to upload: {path}", err=True)
-            click.echo(str(exc), err=True)
+                query_params=query_params,
+                exclude_artists=exclude_artists,
+                exclude_albums=exclude_albums,
+            ),
+            paths,
+        ):
+            if result is None:
+                continue
+            for message, is_err in result.messages:
+                click.echo(message, err=is_err)
+            for row in result.rows:
+                writer.writerow(row)
 
-            response = exc.response
-            error_payload = None
-            if response is not None:
-                error_payload = parse_error_payload(response)
-                if error_payload is not None:
-                    click.echo(json.dumps(error_payload, indent=2), err=True)
-                elif response.text.strip():
-                    click.echo(response.text.strip(), err=True)
 
-            error = format_error(error_payload) or str(exc)
-            if is_empty_file_error(error_payload):
-                click.echo(
+class QueryResult(NamedTuple):
+    rows: list[list[str]]
+    messages: list[tuple[str, bool]]
+
+
+def query_path(
+    session: requests.Session,
+    path: Path,
+    *,
+    query_params: dict[str, str],
+    exclude_artists: list[re.Pattern[str]],
+    exclude_albums: list[re.Pattern[str]],
+) -> QueryResult | None:
+    worker_session = clone_session(session)
+    error = ""
+    results: list[dict[str, Any]] = []
+    metadata_fields: dict[str, str] = {}
+    messages: list[tuple[str, bool]] = []
+
+    try:
+        payload, metadata_fields = build_track_payload(path)
+
+        if matches_any(exclude_artists, metadata_fields.get("artistName", "")):
+            return None
+        if matches_any(exclude_albums, metadata_fields.get("albumName", "")):
+            return None
+
+        results = post_query(
+            worker_session,
+            path,
+            payload,
+            query_params,
+        )
+    except requests.RequestException as exc:
+        messages.extend(
+            [
+                (f"Failed to upload: {path}", True),
+                (str(exc), True),
+            ]
+        )
+
+        response = exc.response
+        error_payload = None
+        if response is not None:
+            error_payload = parse_error_payload(response)
+            if error_payload is not None:
+                messages.append((json.dumps(error_payload, indent=2), True))
+            elif response.text.strip():
+                messages.append((response.text.strip(), True))
+
+        error = format_error(error_payload) or str(exc)
+        if is_empty_file_error(error_payload):
+            messages.append(
+                (
                     f"Large files are rejected by Emy. File size: {path.stat().st_size} bytes.",
-                    err=True,
+                    True,
                 )
-        except CliError as exc:
-            click.echo(f"Failed to upload: {path}", err=True)
-            click.echo(str(exc), err=True)
-            error = str(exc)
+            )
+    except CliError as exc:
+        messages.extend(
+            [
+                (f"Failed to upload: {path}", True),
+                (str(exc), True),
+            ]
+        )
+        error = str(exc)
 
-        for row in build_rows(path, metadata_fields, results, error):
-            writer.writerow(row)
+    return QueryResult(
+        rows=build_rows(path, metadata_fields, results, error),
+        messages=messages,
+    )
 
 
 def post_query(
@@ -160,7 +213,7 @@ def build_rows(
     if not results:
         row = list(source_columns)
         row.append("Error" if error else "No")
-        row.extend(["", "", "", error])
+        row.extend(["", "", "", "", "", error])
         return [row]
 
     rows: list[list[str]] = []

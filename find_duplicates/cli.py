@@ -5,7 +5,12 @@ from pathlib import Path
 import click
 import requests
 
-from .emy import DEFAULT_AUTHORIZATION, DEFAULT_BASE_URL, build_session
+from .emy import (
+    DEFAULT_AUTHORIZATION,
+    DEFAULT_BASE_URL,
+    DEFAULT_MAX_WORKERS,
+    build_session,
+)
 from .fingerprint_action import run as run_fingerprint_action
 from .query_action import run as run_query_action
 
@@ -35,10 +40,18 @@ def cli(ctx: click.Context, base_url: str, authorization: str) -> None:
     "directory",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
 )
+@click.option(
+    "-j",
+    "--jobs",
+    default=DEFAULT_MAX_WORKERS,
+    show_default=True,
+    type=click.IntRange(1),
+    help="Number of files to process concurrently.",
+)
 @click.pass_obj
-def fingerprint(session: requests.Session, directory: Path) -> None:
+def fingerprint(session: requests.Session, directory: Path, jobs: int) -> None:
     """Generate fingerprints for audio files."""
-    run_fingerprint_action(session, directory)
+    run_fingerprint_action(session, directory, max_workers=jobs)
 
 
 @cli.command()
@@ -62,6 +75,14 @@ def fingerprint(session: requests.Session, directory: Path) -> None:
     type=click.Path(exists=False, dir_okay=False, path_type=Path),
     help="Specifies an ignore list in YAML format",
 )
+@click.option(
+    "-j",
+    "--jobs",
+    default=DEFAULT_MAX_WORKERS,
+    show_default=True,
+    type=click.IntRange(1),
+    help="Number of files to process concurrently.",
+)
 @click.pass_obj
 def query(
     session: requests.Session,
@@ -69,6 +90,7 @@ def query(
     confidence: float | None,
     coverage: float | None,
     exclude_from: Path | None,
+    jobs: int,
 ) -> None:
     """Perform a similarity query for audio files."""
     run_query_action(
@@ -77,6 +99,7 @@ def query(
         confidence=confidence,
         coverage=coverage,
         exclude_from=exclude_from,
+        max_workers=jobs,
     )
 
 

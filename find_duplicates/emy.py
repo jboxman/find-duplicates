@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import subprocess
 import uuid
 from pathlib import Path
@@ -12,6 +13,7 @@ import requests
 
 DEFAULT_BASE_URL = "http://localhost:3340/api/v1.1"
 DEFAULT_AUTHORIZATION = "Basic QWRtaW46"
+DEFAULT_MAX_WORKERS = min(32, max(4, (os.cpu_count() or 1) * 2))
 SUPPORTED_AUDIO_SUFFIXES = {".mp3"}
 
 
@@ -23,7 +25,15 @@ def build_session(base_url: str, authorization: str) -> requests.Session:
     session = requests.Session()
     session.headers.update({"authorization": authorization})
     session.base_url = base_url.rstrip("/")
+    session.authorization = authorization
     return session
+
+
+def clone_session(session: requests.Session) -> requests.Session:
+    return build_session(
+        base_url=session.base_url,
+        authorization=session.authorization,
+    )
 
 
 def iter_audio_files(directory: Path) -> list[Path]:
@@ -69,6 +79,7 @@ def run_exiftool(path: Path) -> dict[str, Any]:
         raise CliError(f"Exiftool returned no metadata for {path}.")
 
     return payload[0]
+
 
 def stringify_metadata_value(raw: Any) -> str:
     if not isinstance(raw, (str, int, float)):

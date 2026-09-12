@@ -1,7 +1,9 @@
 from pathlib import Path
+import re
 import unittest
+from unittest.mock import patch
 
-from find_duplicates.query_action import QUERY_CSV_HEADER, build_rows
+from find_duplicates.query_action import QUERY_CSV_HEADER, build_rows, query_path
 
 
 class QueryActionTests(unittest.TestCase):
@@ -176,6 +178,93 @@ class QueryActionTests(unittest.TestCase):
                 "info",
             ],
         )
+
+    @patch("find_duplicates.query_action.post_query")
+    @patch("find_duplicates.query_action.build_track_payload")
+    @patch("find_duplicates.query_action.clone_session")
+    def test_query_path_returns_rows_for_success(
+        self,
+        clone_session_mock,
+        build_track_payload_mock,
+        post_query_mock,
+    ) -> None:
+        worker_session = object()
+        clone_session_mock.return_value = worker_session
+        build_track_payload_mock.return_value = (
+            {"title": "Input Song"},
+            {
+                "songTitle": "Input Song",
+                "albumName": "Input Album",
+                "artistName": "Input Artist",
+            },
+        )
+        post_query_mock.return_value = [
+            {
+                "track": {
+                    "title": "Match Song",
+                    "artist": "Match Artist",
+                    "metaFields": {
+                        "filename": "match.mp3",
+                        "directory": "/matches",
+                        "fileSize": "1 MB",
+                        "album": "Match Album",
+                    },
+                },
+                "audio": {
+                    "coverage": {
+                        "queryCoverage": 0.95,
+                        "trackCoverage": 0.96,
+                    }
+                },
+            }
+        ]
+
+        result = query_path(
+            object(),
+            Path("/tmp/input.mp3"),
+            query_params={"minConfidence": ".90"},
+            exclude_artists=[],
+            exclude_albums=[],
+        )
+
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result.messages, [])
+        self.assertEqual(result.rows[0][0], "input.mp3")
+        self.assertEqual(result.rows[0][5], "Yes")
+        post_query_mock.assert_called_once_with(
+            worker_session,
+            Path("/tmp/input.mp3"),
+            {"title": "Input Song"},
+            {"minConfidence": ".90"},
+        )
+
+    @patch("find_duplicates.query_action.clone_session")
+    @patch("find_duplicates.query_action.build_track_payload")
+    def test_query_path_skips_excluded_artist(
+        self,
+        build_track_payload_mock,
+        clone_session_mock,
+    ) -> None:
+        clone_session_mock.return_value = object()
+        build_track_payload_mock.return_value = (
+            {},
+            {
+                "songTitle": "Input Song",
+                "albumName": "Input Album",
+                "artistName": "Skip Me",
+            },
+        )
+
+        result = query_path(
+            object(),
+            Path("/tmp/input.mp3"),
+            query_params={"minConfidence": ".90"},
+            exclude_artists=[re.compile("^Skip\\ Me", re.IGNORECASE)],
+            exclude_albums=[],
+        )
+
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

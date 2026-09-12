@@ -46,10 +46,11 @@ find-duplicates fingerprint --help
 find-duplicates query --help
 ```
 
-The fingerprint command scans a directory recursively for MP3 files, reads metadata with `exiftool`, and uploads each file to Emy. The upload payload includes ExifTool-derived filename and directory metadata so matching tracks can be traced back later:
+The fingerprint command scans a directory recursively for MP3 files, reads metadata with `exiftool`, and uploads files to Emy concurrently. The upload payload includes ExifTool-derived filename and directory metadata so matching tracks can be traced back later:
 
 ```bash
 find-duplicates fingerprint /path/to/mp3s
+find-duplicates fingerprint /path/to/mp3s --jobs 16
 ```
 
 Global options:
@@ -61,12 +62,13 @@ EMY_AUTHORIZATION="Basic QWRtaW46" find-duplicates fingerprint /path/to/mp3s
 
 ## Query
 
-The Python `query` command scans a directory recursively for MP3 files, reads metadata with `exiftool`, submits each file to Emy's query endpoint, and prints CSV results to stdout.
+The Python `query` command scans a directory recursively for MP3 files, reads metadata with `exiftool`, submits files to Emy's query endpoint concurrently, and prints CSV results to stdout in input order.
 
 ```bash
 find-duplicates query /path/to/mp3s
 find-duplicates query /path/to/mp3s --confidence .75
 find-duplicates query /path/to/mp3s --coverage .75 -E exclude.yaml
+find-duplicates query /path/to/mp3s --jobs 16
 ```
 
 CSV columns:
