@@ -40,3 +40,5 @@ build/
 htmlcov/
 .venv/
 venv/
+
+.codegraph
