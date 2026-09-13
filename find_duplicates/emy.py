@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import mimetypes
-import os
 import subprocess
 import uuid
 from pathlib import Path
@@ -13,7 +12,7 @@ import requests
 
 DEFAULT_BASE_URL = "http://localhost:3340/api/v1.1"
 DEFAULT_AUTHORIZATION = "Basic QWRtaW46"
-DEFAULT_MAX_WORKERS = min(32, max(4, (os.cpu_count() or 1) * 2))
+DEFAULT_MAX_WORKERS = 4
 SUPPORTED_AUDIO_SUFFIXES = {".mp3"}
 
 

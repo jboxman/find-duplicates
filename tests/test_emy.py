@@ -3,10 +3,13 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
-from find_duplicates.emy import build_track_payload, run_exiftool
+from find_duplicates.emy import DEFAULT_MAX_WORKERS, build_track_payload, run_exiftool
 
 
 class EmyTests(unittest.TestCase):
+    def test_default_max_workers_limits_server_load(self) -> None:
+        self.assertEqual(DEFAULT_MAX_WORKERS, 4)
+
     @patch("find_duplicates.emy.subprocess.run")
     def test_run_exiftool_requests_specific_json_fields(self, run_mock) -> None:
         run_mock.return_value = subprocess.CompletedProcess(
