@@ -12,6 +12,16 @@ docker run -d -v /data/emy:/app/data \
   addictedcs/soundfingerprinting.emy:latest
 ```
 
+## Emy memory sizing
+
+> **Important:** For capacity planning, allow approximately **0.75 MiB of Emy RAM per fingerprinted track**, plus headroom for filesystem cache, the OS, and other services.
+
+This is an empirical scaling observation, not a guaranteed Emy implementation detail. In a measured dataset of 11,814 tracks, persistent audio signatures were stored under `sfdata/` as one `trackRef_*.bin` file per track. The directory occupied 3.673 GiB on disk, averaging 326 KiB of serialized signature data per track. Emy's steady-state anonymous RAM was approximately 8.6 GiB: about 2.34 times the serialized `sfdata` size, or 763 KiB per track.
+
+Observed scaling is approximately 0.73 GiB of RAM per 1,000 tracks (7.28 GiB per 10,000 tracks). During startup, Emy used high CPU while anonymous RAM increased, then settled at a stable memory plateau with near-zero CPU. This strongly suggests that Emy deserializes and/or transforms the signatures into a larger, search-optimized in-memory representation. The much smaller Lucene indexes, `query_matches` and `tracks_search` (approximately 24 MiB combined), do not account for the memory consumption.
+
+Linear scaling is a planning assumption only; it has been measured at the approximately 11,800-track point, not validated across multiple dataset sizes.
+
 ## Installation
 
 The project-local launcher will bootstrap `.venv` for you on first run:
