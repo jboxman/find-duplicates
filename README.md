@@ -89,7 +89,14 @@ filename,directory,title,album,artist,success,confidence,coverage,info
 
 Each returned match is emitted as its own CSV row. When a query returns multiple matches, the submitted file columns are repeated for each match row.
 
-When neither `--confidence` nor `--coverage` is specified, the CLI defaults to `minConfidence=.90` to match the legacy behavior. The exclude file accepts YAML keys such as `artists` and `albums`; values are treated as case-insensitive literal prefixes.
+When neither `--confidence` nor `--coverage` is specified, the CLI defaults to `minConfidence=.90` to match the legacy behavior. The exclude file accepts YAML keys such as `artists` and `albums`; values are treated as case-insensitive literal prefixes. A `paths` list accepts absolute paths or partial paths matched from the filename backward:
+
+```yaml
+paths:
+  - path/to/filename.mp3
+  - to/another-filename.mp3
+  - /complete/path/to/a-third-filename.mp3
+```
 
 ## Query Reference
 

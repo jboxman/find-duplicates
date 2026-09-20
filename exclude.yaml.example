@@ -6,3 +6,7 @@ artists:
 albums:
   - That one time
   - Is that your word?
+paths:
+  - path/to/filename.mp3
+  - to/another-filename.mp3
+  - /complete/path/to/a-third-filename.mp3

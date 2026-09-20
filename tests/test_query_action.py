@@ -3,10 +3,39 @@ import re
 import unittest
 from unittest.mock import patch
 
-from find_duplicates.query_action import QUERY_CSV_HEADER, build_rows, query_path
+from find_duplicates.query_action import (
+    QUERY_CSV_HEADER,
+    build_rows,
+    compile_exclude_paths,
+    matches_excluded_path,
+    query_path,
+)
 
 
 class QueryActionTests(unittest.TestCase):
+    def test_excluded_paths_accept_partial_and_absolute_paths(self) -> None:
+        cases = [
+            (Path("/music/path/to/filename.mp3"), "path/to/filename.mp3"),
+            (Path("/music/path/to/filename.mp3"), "to/filename.mp3"),
+            (Path("/compete/path/filename.mp3"), "/compete/path/filename.mp3"),
+        ]
+
+        for path, exclusion in cases:
+            with self.subTest(exclusion=exclusion):
+                self.assertTrue(
+                    matches_excluded_path(compile_exclude_paths([exclusion]), path)
+                )
+
+    def test_excluded_paths_match_at_component_boundaries(self) -> None:
+        exclusions = compile_exclude_paths(["to/filename.mp3"])
+
+        self.assertFalse(
+            matches_excluded_path(
+                exclusions,
+                Path("/music/not-to/filename.mp3"),
+            )
+        )
+
     def test_build_rows_includes_metadata_columns(self) -> None:
         rows = build_rows(
             Path("/tmp/query/input.mp3"),

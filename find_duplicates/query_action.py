@@ -52,6 +52,8 @@ def run(
     excludes = load_exclude_file(exclude_from) if exclude_from else {}
     exclude_artists = compile_exclude_patterns(excludes.get("artists"))
     exclude_albums = compile_exclude_patterns(excludes.get("albums"))
+    exclude_paths = compile_exclude_paths(excludes.get("paths"))
+    paths = [path for path in paths if not matches_excluded_path(exclude_paths, path)]
 
     query_params = build_query_params(confidence=confidence, coverage=coverage)
     writer = csv.writer(click.get_text_stream("stdout"))
@@ -322,6 +324,30 @@ def compile_exclude_patterns(values: Any) -> list[re.Pattern[str]]:
 
 def matches_any(patterns: list[re.Pattern[str]], value: str) -> bool:
     return any(pattern.search(value) for pattern in patterns)
+
+
+def compile_exclude_paths(values: Any) -> list[Path]:
+    if not isinstance(values, list):
+        return []
+
+    paths: list[Path] = []
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value)
+        paths.append(path.resolve() if path.is_absolute() else path)
+    return paths
+
+
+def matches_excluded_path(exclusions: list[Path], path: Path) -> bool:
+    candidate = path.resolve()
+    for exclusion in exclusions:
+        if exclusion.is_absolute():
+            if candidate == exclusion:
+                return True
+        elif candidate.parts[-len(exclusion.parts) :] == exclusion.parts:
+            return True
+    return False
 
 
 def format_error(payload: dict[str, Any] | None) -> str:
