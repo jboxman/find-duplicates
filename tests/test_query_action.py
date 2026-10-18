@@ -36,6 +36,14 @@ class QueryActionTests(unittest.TestCase):
             )
         )
 
+    def test_excluded_paths_keep_absolute_matches_exact(self) -> None:
+        exclusions = compile_exclude_paths(["/music/path"])
+
+        self.assertTrue(matches_excluded_path(exclusions, Path("/music/path")))
+        self.assertFalse(
+            matches_excluded_path(exclusions, Path("/other/music/path"))
+        )
+
     def test_build_rows_includes_metadata_columns(self) -> None:
         rows = build_rows(
             Path("/tmp/query/input.mp3"),
